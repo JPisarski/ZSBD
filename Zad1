@@ -1,14 +1,45 @@
-CREATE TABLE DEPARTMENTS(
-department_id int NOT NULL, 
-department_name varchar(100), 
-manager_id int
+-- zadanie 1
+
+CREATE TABLE REGIONS(
+region_id int NOT NULL PRIMARY KEY,
+region_name varchar(255) NOT NULL
 );
 
-/*
-ALTER TABLE DEPARTMENTS ADD COLUMN location_id int;
-INSERT INTO DEPARTMENTS VALUES(1, 'A', 1, 1);
-SELECT * FROM DEPARTMENTS;
-*CREATE TABLE EMPLOYESS(
+CREATE TABLE COUNTRIES(
+country_id int NOT NULL,
+country_name varchar(255) NOT NULL,
+region_id int,
+PRIMARY KEY(country_id),
+FOREIGN KEY(region_id) REFERENCES REGIONS(region_id)
+);
+
+CREATE TABLE LOCATIONS(
+location_id int NOT NULL PRIMARY KEY,
+street_address varchar(255),
+postal_code varchar(255),
+city varchar(255),
+state_province varchar(255),
+country_id int,
+FOREIGN KEY(country_id) REFERENCES COUNTRIES(country_id)
+);
+
+CREATE TABLE JOBS(
+job_id int NOT NULL PRIMARY KEY,
+job_title varchar(255)
+);
+
+ALTER TABLE JOBS ADD min_salary float;
+ALTER TABLE JOBS ADD max_salary float;
+ALTER TABLE JOBS ADD CONSTRAINT sprawdzam CHECK (min_salary <= max_salary - 2000);
+
+CREATE TABLE DEPARTMENTS(
+department_id int NOT NULL PRIMARY KEY, 
+department_name varchar(100), 
+manager_id int,
+location_id int
+);
+
+CREATE TABLE EMPLOYEES(
 employee_id int NOT NULL PRIMARY KEY,
 first_name varchar(255),
 last_name varchar(255),
@@ -19,21 +50,14 @@ job_id int,
 salary float,
 commisision_pct float,
 manager_id int,
-department_id int,
-FOREIGN KEY(job_id) REFERENCES JOBS(job_id),
-FOREIGN KEY(department_id) REFERENCES DEPARTMENTS(department_id),
-FOREIGN KEY(maanager_id) REFERENCES DEPARMENTS(manager_id),
-FOREIGN KEY(maanager_id) REFERENCES EMPLOYESS(maanager_id)
+department_id int
 );
 
+ALTER TABLE  EMPLOYEES ADD FOREIGN KEY(job_id) REFERENCES JOBS(job_id);
+ALTER TABLE  EMPLOYEES ADD FOREIGN KEY(department_id) REFERENCES DEPARTMENTS(department_id);
+ALTER TABLE  EMPLOYEES ADD FOREIGN KEY(manager_id) REFERENCES EMPLOYEES(employee_id);
 
 
-CREATE TABLE JOBS(
-job_id int NOT NULL PRIMARY KEY,
-job_title varchar(255),
-min_salary float,
-max_salary float
-);
 
 CREATE TABLE JOB_HISTORY(
 employee_id int NOT NULL,
@@ -46,27 +70,37 @@ FOREIGN KEY(employee_id) REFERENCES EMPLOYEES(employee_id),
 FOREIGN KEY(job_id) REFERENCES JOBS(job_id)
 );
 
+-- zadanie 2
 
+INSERT INTO JOBS VALUES(1, 'A', 100, 2500);
+INSERT INTO JOBS VALUES(2, 'B', 1000, 25000);
+INSERT INTO JOBS VALUES(3, 'C', 1000, 5000);
+INSERT INTO JOBS VALUES(4, 'D', 100, 5000);
 
-CREATE TABLE LOCATIONS(
-location_id int NOT NULL PRIMARY KEY,
-street_address varchar(255),
-postal_code varchar(255),
-city varchar(255),
-state_province varchar(255),
-country_id int,
-FOREIGN KEY(country_id) REFERENCES COUNTRIES(country_id)
-);
+-- zadanie 3
 
-CREATE TABLE COUNTRIES(
-country_id int NOT NULL,
-country_name varchar(255) NOT NULL,
-region_id int,
-PRIMARY KEY(country_id),
-FOREIGN KEY(region_id) REFERENCES REGIONS(region_id)
-);
+INSERT INTO REGIONS VALUES(1, 'EUROPA');
+INSERT INTO COUNTRIES VALUES(1, 'POLSKA', 1);
+INSERT INTO LOCATIONS VALUES(1, 'Radosna 5', '17-117', 'Miejsce', 'Mazowieckie', 1);
+INSERT INTO EMPLOYEES VALUES(1, 'Jan', 'Nowak', 'jn@poczta.pl', '111222333', DATE '2025-07-01', 1, 1500, 0.25, NULL, NULL);
+INSERT INTO EMPLOYEES VALUES(2, 'Adam', 'Nowak', 'an@poczta.pl', '211222333', DATE '2025-07-01', 1, 1500, 0.25, NULL, NULL);
+INSERT INTO EMPLOYEES VALUES(3, 'Józef', 'Nowak', 'njpoczta.pl', '311222333', DATE '2025-07-01', 1, 1500, 0.25, NULL, NULL);
+INSERT INTO EMPLOYEES VALUES(4, 'Franciszek', 'Nowak', 'fn@poczta.pl', '411222333', DATE '2025-07-01', 1, 1500, 0.25, NULL, NULL);
 
-CREATE TABLE REGIONS(
-region_id int NOT NULL PRIMARY KEY,
-region_name varchar(255) NOT NULL
-);*/
+-- zadanie 4
+
+UPDATE EMPLOYEES SET manager_id = 1 WHERE employee_id IN (2, 3);
+
+-- zadanie 5
+
+UPDATE JOBS SET min_salary = min_salary + 500, max_salary = max_salary + 500 WHERE LOWER(job_title) LIKE '%b%' OR LOWER(job_title) LIKE '%s%';
+
+-- zadanie 6
+
+DELETE FROM JOBS WHERE max_salary > 9000;
+
+-- zadanie 7
+
+DROP TABLE EMPLOYEES;
+SHOW RECYCLEBIN;
+FLASHBACK TABLE EMPLOYEES TO BEFORE DROP;
