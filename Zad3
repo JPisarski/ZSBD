@@ -45,15 +45,15 @@ WHERE
 -- a) można dodać nowego pracownika
 
 INSERT INTO v_employee_extended (employee_id, last_name, first_name, salary, job_id, email, hire_date)
-VALUES (2025, 'Nowak', 'Jan', 25000, 'AD_VP', 'jan@gmail.com', '25/10/25');
+VALUES (2007, 'Nowak', 'Jan', 10000, 'IT_PROG', 'jan@gmail.com', '25/10/25');
 
 -- b) można edytować pracownika
 
 UPDATE v_employee_extended
 SET last_name = 'Józef'
-WHERE employee_id = 2025;
+WHERE employee_id = 2007;
 
 -- c) można usunąć pracownika
 
 DELETE FROM v_employee_extended
-WHERE employee_id = 2000;
+WHERE employee_id = 2007;
