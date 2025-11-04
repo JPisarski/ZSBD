@@ -1,0 +1,59 @@
+-- zadanie 1
+
+CREATE VIEW v_wysokie_pensje AS
+Select
+    e.FIRST_NAME, e.LAST_NAME, e.SALARY
+FROM
+employees e WHERE
+e.SALARY > 6000;
+
+-- zadanie 2
+
+CREATE OR REPLACE VIEW v_wysokie_pensje AS
+Select
+    e.FIRST_NAME, e.LAST_NAME, e.SALARY
+FROM
+employees e WHERE
+e.SALARY > 12000;
+
+-- zadanie 3
+
+DROP VIEW v_wysokie_pensje;
+
+-- zadanie 4
+
+CREATE OR REPLACE VIEW v_employee AS
+SELECT
+    e.EMPLOYEE_ID, e.LAST_NAME, e.FIRST_NAME, d.DEPARTMENT_NAME
+FROM
+    EMPLOYEES e
+INNER JOIN DEPARTMENTS d ON e.DEPARTMENT_ID = d.DEPARTMENT_ID
+WHERE d.DEPARTMENT_NAME = 'Finance';
+
+-- zadanie 5
+
+CREATE OR REPLACE VIEW v_employee_extended AS
+SELECT
+    e.EMPLOYEE_ID, e.LAST_NAME, e.FIRST_NAME, e.SALARY, e.JOB_ID, e.EMAIL , e.HIRE_DATE 
+FROM
+    EMPLOYEES e
+WHERE
+    e.SALARY BETWEEN 5000 AND 12000;
+    
+-- zadanie 6
+
+-- a) można dodać nowego pracownika
+
+INSERT INTO v_employee_extended (employee_id, last_name, first_name, salary, job_id, email, hire_date)
+VALUES (2025, 'Nowak', 'Jan', 25000, 'AD_VP', 'jan@gmail.com', '25/10/25');
+
+-- b) można edytować pracownika
+
+UPDATE v_employee_extended
+SET last_name = 'Józef'
+WHERE employee_id = 2025;
+
+-- c) można usunąć pracownika
+
+DELETE FROM v_employee_extended
+WHERE employee_id = 2000;
