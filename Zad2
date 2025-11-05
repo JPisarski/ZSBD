@@ -43,3 +43,39 @@ SELECT LAST_NAME || ' ' || SALARY AS WYNAGRODZENIE FROM EMPLOYEES WHERE DEPARTME
 -- zadanie 2
 
 SELECT employees.hire_date, employees.last_name, employees.salary FROM employees JOIN employees on employees.manager_id = employees.employee_id WHERE EXTRACT(YEAR FROM employees.hire_date) = 2005;
+
+--  zadanie 3
+
+--  zadanie 4
+
+--  zadanie 5
+
+--  zadanie 6
+
+--  zadanie 7
+
+--  zadanie 8
+
+--  zadanie 9
+
+--  zadanie 10
+
+--  zadanie 11
+
+--  zadanie 12
+
+--  zadanie 13
+
+--  zadanie 14
+
+--  zadanie 15
+
+--  zadanie 16
+
+--  zadanie 17
+
+--  zadanie 18
+
+--  zadanie 19
+
+--  zadanie 20
