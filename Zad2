@@ -122,12 +122,28 @@ WHERE e.salary > (SELECT AVG(e1.salary) FROM employees e1) ORDER BY d.department
 
 --  zadanie 16
 
-
+SELECT j.job_title, AVG(e.salary) AS średnie_zarobki FROM employees e JOIN jobs j ON e.job_id = j.job_id 
+GROUP BY job_title ORDER BY średnie_zarobki DESC FETCH FIRST 5 ROWS ONLY;
 
 --  zadanie 17
 
+SELECT r.region_name, COUNT(DISTINCT c.country_id) AS l_krajów, COUNT(employee_id) AS l_pracowników
+FROM regions r JOIN countries c ON r.region_id = c.region_id JOIN locations l ON c.country_id = l.country_id
+JOIN departments d ON l.location_id = d.location_id LEFT JOIN employees e ON d.department_id = e.department_id
+GROUP BY r.region_name ORDER BY r.region_name;
+
 --  zadanie 18
+
+SELECT e.first_name || ' ' || e.last_name AS imie_nazwisko FROM employees e JOIN employees m ON e.manager_id = m.employee_id
+WHERE e.salary > m.salary;
 
 --  zadanie 19
 
+SELECT TO_CHAR(hire_date, 'MM') AS miesiac, COUNT(employee_id) AS l_pracowników 
+FROM employees GROUP BY TO_CHAR(hire_date, 'MM') ORDER BY miesiac;
+
 --  zadanie 20
+
+SELECT d.department_name, ROUND(AVG(e.salary)) AS średnie_wynagrodzenie
+FROM employees e JOIN departments d ON e.department_id = d.department_id
+GROUP BY d.department_name ORDER BY średnie_wynagrodzenie DESC FETCH FIRST 3 ROWS ONLY;
