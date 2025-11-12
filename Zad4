@@ -87,4 +87,4 @@ JOIN products p ON s.product_id = p.product_id ORDER BY e.last_name, s.sale_date
 -- zadanie 11
 
 SELECT DISTINCT e.first_name AS imie, e.last_name AS nazwisko, j.job_title AS stanowisko
-FROM employees e JOIN sales s ON e.employee_id = s.employee_id JOIN jobs j on e.job_id = j.job_id;
+FROM employees e JOIN sales s ON e.employee_id = s.employee_id JOIN jobs j ON e.job_id = j.job_id;
