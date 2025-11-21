@@ -1,0 +1,115 @@
+-- zadanie 1
+
+CREATE TABLE archiwum_departamentow (
+    id NUMBER,
+    nazwa VARCHAR2(100),
+    data_zamkniecia DATE,
+    ostatni_manager VARCHAR2(200)
+);
+
+CREATE OR REPLACE TRIGGER trg_archive_department
+AFTER DELETE ON departments
+FOR EACH ROW
+DECLARE
+    v_manager VARCHAR2(200);
+BEGIN
+    -- pobranie managera departamentu (opcjonalnie, jeśli istnieje)
+    SELECT first_name || ' ' || last_name
+    INTO v_manager
+    FROM employees
+    WHERE employee_id = :OLD.manager_id;
+
+EXCEPTION 
+    WHEN NO_DATA_FOUND THEN
+        v_manager := 'BRAK';
+
+    WHEN OTHERS THEN
+        v_manager := 'NIEZNANY';
+END;
+
+BEGIN
+    INSERT INTO archiwum_departamentow(id, nazwa, data_zamkniecia, ostatni_manager)
+    VALUES(:OLD.department_id, :OLD.department_name, SYSDATE, v_manager);
+END;
+/
+
+-- zadanie 2
+
+CREATE TABLE zlodziej (
+    id NUMBER PRIMARY KEY,
+    "USER" VARCHAR2(50),
+    czas_zmiany DATE
+);
+
+CREATE SEQUENCE zlodziej_seq START WITH 1;
+
+CREATE OR REPLACE TRIGGER trg_check_salary
+BEFORE INSERT OR UPDATE ON employees
+FOR EACH ROW
+DECLARE
+    v_user VARCHAR2(50);
+BEGIN
+    v_user := USER;
+
+    IF :NEW.salary < 2000 OR :NEW.salary > 26000 THEN
+        INSERT INTO zlodziej(id, "USER", czas_zmiany)
+        VALUES(zlodziej_seq.NEXTVAL, v_user, SYSDATE);
+
+        RAISE_APPLICATION_ERROR(-20001,
+            'Wynagrodzenie musi być w widełkach 2000 - 26000!');
+    END IF;
+
+END;
+/
+
+-- zadanie 3
+
+CREATE SEQUENCE emp_ai_seq START WITH 300 INCREMENT BY 1;
+
+CREATE OR REPLACE TRIGGER trg_emp_autoinc
+BEFORE INSERT ON employees
+FOR EACH ROW
+BEGIN
+    IF :NEW.employee_id IS NULL THEN
+        :NEW.employee_id := emp_ai_seq.NEXTVAL;
+    END IF;
+END;
+/
+
+-- zadanie 4
+
+CREATE OR REPLACE TRIGGER trg_lock_job_grades
+BEFORE INSERT OR UPDATE OR DELETE ON job_grades
+BEGIN
+    RAISE_APPLICATION_ERROR(-20002, 'Operacje na JOB_GRADES są zabronione!');
+END;
+/
+
+-- zadanie 5
+
+CREATE OR REPLACE TRIGGER trg_keep_salary_range
+BEFORE UPDATE OF min_salary, max_salary ON jobs
+FOR EACH ROW
+BEGIN
+    :NEW.min_salary := :OLD.min_salary;
+    :NEW.max_salary := :OLD.max_salary;
+
+    DBMS_OUTPUT.PUT_LINE('Zmiana min/max_salary jest niedozwolona – wartości przywrócono.');
+END;
+/
+
+-- zadanie 6
+
+DELETE FROM departments WHERE department_id = 10;
+SELECT * FROM archiwum_departamentow;
+
+INSERT INTO employees(employee_id, first_name, last_name, salary, job_id)
+VALUES(NULL, 'Jan', 'Złodziej', 30000, 'IT_PROG');   -- powinien zgłosić błąd
+SELECT * FROM zlodziej;
+
+INSERT INTO employees(first_name, last_name, salary, job_id)
+VALUES('Nowy', 'Pracownik', 5000, 'IT_PROG');
+
+INSERT INTO job_grades VALUES('A', 1, 10); -- powinien wywołać błąd
+
+INSERT INTO job_grades VALUES('A', 1, 10); -- powinien wywołać błąd
