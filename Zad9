@@ -1,0 +1,234 @@
+-- zadanie 1
+
+CREATE OR REPLACE PACKAGE hr_utils AS
+    -- PROCEDURY Z ZADAŃ
+    PROCEDURE add_job(p_job_id VARCHAR2, p_job_title VARCHAR2);
+    PROCEDURE update_job_title(p_job_id VARCHAR2, p_new_title VARCHAR2);
+    PROCEDURE delete_job(p_job_id VARCHAR2);
+    PROCEDURE get_emp_data(p_emp_id NUMBER, p_salary OUT NUMBER, p_last_name OUT VARCHAR2);
+    PROCEDURE add_employee(p_first_name VARCHAR2 DEFAULT NULL,
+                           p_last_name VARCHAR2,
+                           p_salary NUMBER DEFAULT 10000,
+                           p_job_id VARCHAR2 DEFAULT 'IT_PROG',
+                           p_manager_id NUMBER DEFAULT NULL,
+                           p_dept_id NUMBER DEFAULT 60);
+    PROCEDURE avg_salary_by_manager(p_manager_id NUMBER, p_avg OUT NUMBER);
+    PROCEDURE raise_department_salary(p_dept_id NUMBER, p_percent NUMBER);
+    PROCEDURE move_employee(p_emp_id NUMBER, p_new_dept_id NUMBER);
+    PROCEDURE delete_department(p_dept_id NUMBER);
+
+    -- FUNKCJE
+    FUNCTION get_job_title(p_job_id VARCHAR2) RETURN VARCHAR2;
+    FUNCTION yearly_salary(p_emp_id NUMBER) RETURN NUMBER;
+    FUNCTION get_area_code(p_phone VARCHAR2) RETURN VARCHAR2;
+    FUNCTION capitalize_edges(p_text VARCHAR2) RETURN VARCHAR2;
+    FUNCTION pesel_to_date(p_pesel VARCHAR2) RETURN DATE;
+    FUNCTION stats_by_country(p_country_name VARCHAR2) RETURN VARCHAR2;
+    FUNCTION gen_access_id(p_last_name VARCHAR2, p_phone VARCHAR2, p_first_name VARCHAR2)
+        RETURN VARCHAR2;
+END hr_utils;
+/
+
+-- zadanie 2
+
+CREATE OR REPLACE PACKAGE regions_pkg AS
+    PROCEDURE add_region(p_region_id NUMBER, p_region_name VARCHAR2);
+    PROCEDURE update_region(p_region_id NUMBER, p_region_name VARCHAR2);
+    PROCEDURE delete_region(p_region_id NUMBER);
+
+    FUNCTION get_region_name(p_region_id NUMBER) RETURN VARCHAR2;
+    FUNCTION find_region_by_name(p_name VARCHAR2) RETURN NUMBER;
+    FUNCTION get_regions LIKE SYS_REFCURSOR RETURN SYS_REFCURSOR;
+END regions_pkg;
+/
+
+CREATE OR REPLACE PACKAGE BODY regions_pkg AS
+    PROCEDURE add_region(p_region_id NUMBER, p_region_name VARCHAR2) IS
+    BEGIN
+        INSERT INTO regions(region_id, region_name)
+        VALUES(p_region_id, p_region_name);
+    END;
+
+    PROCEDURE update_region(p_region_id NUMBER, p_region_name VARCHAR2) IS
+    BEGIN
+        UPDATE regions SET region_name = p_region_name
+        WHERE region_id = p_region_id;
+    END;
+
+    PROCEDURE delete_region(p_region_id NUMBER) IS
+    BEGIN
+        DELETE FROM regions WHERE region_id = p_region_id;
+    END;
+
+    FUNCTION get_region_name(p_region_id NUMBER)
+    RETURN VARCHAR2 IS
+        v_name VARCHAR2(50);
+    BEGIN
+        SELECT region_name INTO v_name
+        FROM regions WHERE region_id = p_region_id;
+
+        RETURN v_name;
+    END;
+
+    FUNCTION find_region_by_name(p_name VARCHAR2)
+    RETURN NUMBER IS
+        v_id NUMBER;
+    BEGIN
+        SELECT region_id INTO v_id
+        FROM regions WHERE region_name = p_name;
+
+        RETURN v_id;
+    END;
+
+    FUNCTION get_regions RETURN SYS_REFCURSOR IS
+        c SYS_REFCURSOR;
+    BEGIN
+        OPEN c FOR SELECT * FROM regions;
+        RETURN c;
+    END;
+END regions_pkg;
+/
+
+-- zadanie 3
+
+CREATE TABLE regions_audit (
+    id NUMBER PRIMARY KEY,
+    err_msg VARCHAR2(4000),
+    err_date DATE,
+    username VARCHAR2(50)
+);
+
+CREATE SEQUENCE regions_audit_seq START WITH 1;
+
+CREATE OR REPLACE PACKAGE regions_ex AS
+    e_duplicate_region EXCEPTION;
+    e_region_with_countries EXCEPTION;
+
+    PROCEDURE log_error(p_message VARCHAR2);
+
+    PROCEDURE add_region(p_region_id NUMBER, p_region_name VARCHAR2);
+    PROCEDURE delete_region(p_region_id NUMBER);
+END regions_ex;
+/
+
+CREATE OR REPLACE PACKAGE BODY regions_ex AS
+
+    PROCEDURE log_error(p_message VARCHAR2) IS
+    BEGIN
+        INSERT INTO regions_audit(id, err_msg, err_date, username)
+        VALUES(regions_audit_seq.NEXTVAL, p_message, SYSDATE, USER);
+    END;
+
+    PROCEDURE add_region(p_region_id NUMBER, p_region_name VARCHAR2) IS
+        v_count NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v_count
+        FROM regions WHERE region_name = p_region_name;
+
+        IF v_count > 0 THEN
+            log_error('Próba dodania duplikatu regionu: ' || p_region_name);
+            RAISE e_duplicate_region;
+        END IF;
+
+        INSERT INTO regions VALUES(p_region_id, p_region_name);
+    END;
+
+    PROCEDURE delete_region(p_region_id NUMBER) IS
+        v_count NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v_count
+        FROM countries WHERE region_id = p_region_id;
+
+        IF v_count > 0 THEN
+            log_error('Próba usunięcia regionu z krajami: ' || p_region_id);
+            RAISE e_region_with_countries;
+        END IF;
+
+        DELETE FROM regions WHERE region_id = p_region_id;
+    END;
+
+END regions_ex;
+/
+
+-- zadanie 4
+
+CREATE OR REPLACE PACKAGE dept_stats AS
+    FUNCTION avg_salary(p_dept_id NUMBER) RETURN NUMBER;
+    FUNCTION job_minmax(p_job_id VARCHAR2) RETURN VARCHAR2;
+    PROCEDURE dept_report(p_dept_id NUMBER);
+END dept_stats;
+/
+
+CREATE OR REPLACE PACKAGE BODY dept_stats AS
+
+    FUNCTION avg_salary(p_dept_id NUMBER)
+    RETURN NUMBER IS
+        v_avg NUMBER;
+    BEGIN
+        SELECT AVG(salary)
+        INTO v_avg
+        FROM employees
+        WHERE department_id = p_dept_id;
+
+        RETURN v_avg;
+    END;
+
+    FUNCTION job_minmax(p_job_id VARCHAR2)
+    RETURN VARCHAR2 IS
+        v_min NUMBER;
+        v_max NUMBER;
+    BEGIN
+        SELECT min_salary, max_salary
+        INTO (v_min, v_max)
+        FROM jobs
+        WHERE job_id = p_job_id;
+
+        RETURN 'MIN=' || v_min || ' MAX=' || v_max;
+    END;
+
+    PROCEDURE dept_report(p_dept_id NUMBER) IS
+        v_avg NUMBER;
+        v_count NUMBER;
+    BEGIN
+        SELECT AVG(salary), COUNT(*)
+        INTO v_avg, v_count
+        FROM employees
+        WHERE department_id = p_dept_id;
+
+        DBMS_OUTPUT.PUT_LINE('RAPORT DEPT ' || p_dept_id);
+        DBMS_OUTPUT.PUT_LINE('Liczba pracowników: ' || v_count);
+        DBMS_OUTPUT.PUT_LINE('Średnie wynagrodzenie: ' || v_avg);
+    END;
+
+END dept_stats;
+/
+
+-- zadanie 5
+
+CREATE OR REPLACE PACKAGE auto_update_pkg AS
+    PROCEDURE normalize_phones;
+    PROCEDURE mass_raise(p_job_id VARCHAR2, p_percent NUMBER);
+END auto_update_pkg;
+/
+
+CREATE OR REPLACE PACKAGE BODY auto_update_pkg AS
+
+    -- formatujemy telefony do NNN-NNN-NNNN
+    PROCEDURE normalize_phones IS
+    BEGIN
+        UPDATE employees
+        SET phone_number = 
+            SUBSTR(REGEXP_REPLACE(phone_number, '[^0-9]', ''), 1, 3) || '-' ||
+            SUBSTR(REGEXP_REPLACE(phone_number, '[^0-9]', ''), 4, 3) || '-' ||
+            SUBSTR(REGEXP_REPLACE(phone_number, '[^0-9]', ''), 7);
+    END;
+
+    PROCEDURE mass_raise(p_job_id VARCHAR2, p_percent NUMBER) IS
+    BEGIN
+        UPDATE employees
+        SET salary = salary * (1 + p_percent/100)
+        WHERE job_id = p_job_id;
+    END;
+
+END auto_update_pkg;
+/
