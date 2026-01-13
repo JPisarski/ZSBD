@@ -8,18 +8,17 @@ IS
     v_title jobs.job_title%TYPE;
     e_no_job EXCEPTION;
 BEGIN
-    SELECT job_title
-    INTO v_title
-    FROM jobs
-    WHERE job_id = p_job_id;
-
+    SELECT job_title INTO v_title FROM jobs WHERE job_id = p_job_id;
     RETURN v_title;
 
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        RAISE e_no_job;
-    WHEN e_no_job THEN
         RETURN 'Taka praca nie istnieje!';
+END;
+/
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Nazwa pracy: ' || get_job_title('IT_PROG'));
 END;
 /
 
@@ -35,14 +34,18 @@ IS
 BEGIN
     SELECT salary, NVL(commission_pct, 0)
     INTO v_sal, v_comm
-    FROM employees
-    WHERE employee_id = p_emp_id;
+    FROM employees WHERE employee_id = p_emp_id;
 
     RETURN v_sal * 12 + (v_sal * v_comm);
 
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         RETURN NULL;
+END;
+/
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Roczne wynagrodzenie: ' || yearly_salary(2025));
 END;
 /
 
@@ -54,7 +57,13 @@ CREATE OR REPLACE FUNCTION get_area_code(
 RETURN VARCHAR2
 IS
 BEGIN
-    RETURN SUBSTR(p_phone, 1, INSTR(p_phone, '.', 1, 1) - 1);
+
+    RETURN '(' || SUBSTR(p_phone, 1, INSTR(p_phone, '.') - 1) || ')' || SUBSTR(REPLACE(p_phone, '.', ''), INSTR(p_phone, '.'));
+END;
+/
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Numer kierunkowy: ' || get_area_code('555.555.5555'));
 END;
 /
 
@@ -72,7 +81,12 @@ BEGIN
 
     RETURN UPPER(SUBSTR(p_text, 1, 1))
            || LOWER(SUBSTR(p_text, 2, LENGTH(p_text) - 2))
-           || UPPER(SUBSTR(p_text, -1));
+           || UPPER(SUBSTR(p_text, -1, 1));
+END;
+/
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Tekst: ' || capitalize_edges('ALFA I OMEGA'));
 END;
 /
 
@@ -91,28 +105,23 @@ BEGIN
     v_month := SUBSTR(p_pesel, 3, 2);
     v_day   := SUBSTR(p_pesel, 5, 2);
 
-    -- określenie stulecia
     IF v_month BETWEEN 1 AND 12 THEN
         v_year := 1900 + v_year;
     ELSIF v_month BETWEEN 21 AND 32 THEN
         v_year := 2000 + v_year;
         v_month := v_month - 20;
-    ELSIF v_month BETWEEN 41 AND 52 THEN
-        v_year := 2100 + v_year;
-        v_month := v_month - 40;
-    ELSIF v_month BETWEEN 61 AND 72 THEN
-        v_year := 2200 + v_year;
-        v_month := v_month - 60;
-    ELSIF v_month BETWEEN 81 AND 92 THEN
-        v_year := 1800 + v_year;
-        v_month := v_month - 80;
     END IF;
-
+    
     RETURN TO_DATE(v_year || '-' || v_month || '-' || v_day, 'YYYY-MM-DD');
 
 EXCEPTION
     WHEN OTHERS THEN
         RETURN NULL;
+END;
+/
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Data urodzenia: ' || pesel_to_date('99062407777'));
 END;
 /
 
@@ -126,23 +135,16 @@ IS
     v_country_id countries.country_id%TYPE;
     v_emp_count NUMBER;
     v_dept_count NUMBER;
-
-    e_no_country EXCEPTION;
 BEGIN
-    -- najpierw weryfikacja kraju
-    SELECT country_id
-    INTO v_country_id
-    FROM countries
-    WHERE country_name = p_country_name;
 
-    -- liczbę departamentów
+    SELECT country_id INTO v_country_id FROM countries WHERE country_name = p_country_name;
+
     SELECT COUNT(*)
     INTO v_dept_count
     FROM departments d
     JOIN locations l ON d.location_id = l.location_id
     WHERE l.country_id = v_country_id;
 
-    -- liczbę pracowników
     SELECT COUNT(*)
     INTO v_emp_count
     FROM employees e
@@ -150,13 +152,17 @@ BEGIN
     JOIN locations l ON d.location_id = l.location_id
     WHERE l.country_id = v_country_id;
 
-    RETURN v_emp_count || ',' || v_dept_count;
+    RETURN 'Pracownicy: ' || v_emp_count || ', Departamenty: ' || v_dept_count;
 
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        RAISE e_no_country;
-    WHEN e_no_country THEN
         RETURN 'Brak takiego kraju!';
+END;
+/
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('United States of America: ' || stats_by_country('United States of America'));
+    DBMS_OUTPUT.PUT_LINE('Ukraine: ' || stats_by_country('Ukraine'));
 END;
 /
 
@@ -171,7 +177,6 @@ RETURN VARCHAR2
 IS
     v_last4 VARCHAR2(4);
 BEGIN
-    -- ostatnie 4 cyfry
     v_last4 := SUBSTR(REPLACE(p_phone, '.', ''), -4);
 
     RETURN UPPER(SUBSTR(p_last_name, 1, 3))
@@ -179,3 +184,9 @@ BEGIN
            || UPPER(SUBSTR(p_first_name, 1, 1));
 END;
 /
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE(gen_access_id('Nowak', '555.555.5555', 'Jan'));
+END;
+/
+
