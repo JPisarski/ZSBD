@@ -509,8 +509,6 @@ END;
 SELECT zmarly_id, imie, nazwisko, data_zgonu, DENSE_RANK() OVER (ORDER BY data_zgonu ASC) 
 AS rank_zgonu FROM zmarli ORDER BY rank_zgonu;
 
-
-
 CREATE SEQUENCE seq_podsumowanie START WITH 1;
 
 
@@ -614,7 +612,6 @@ BEGIN
     END IF;
 END;
 /
-
 
 CREATE OR REPLACE TRIGGER automatyczne_podsumowanie_rezerwacje
 AFTER INSERT ON rezerwacje
