@@ -1,0 +1,686 @@
+
+
+
+
+CREATE SEQUENCE seq_log_id START WITH 1;
+CREATE SEQUENCE seq_uzytkownik_id START WITH 1;
+
+
+
+
+CREATE OR REPLACE TRIGGER log_auto_increment
+BEFORE INSERT ON logi
+FOR EACH ROW
+BEGIN
+  :new.log_id := seq_log_id.NEXTVAL;
+END;
+/
+
+CREATE OR REPLACE TRIGGER uzytkownicy_auto_increment
+BEFORE INSERT ON uzytkownicy
+FOR EACH ROW
+BEGIN
+  :new.uzytkownik_id := seq_uzytkownik_id.NEXTVAL;
+END;
+/
+
+
+CREATE TABLE groby(
+    grob_id NUMBER PRIMARY KEY,
+    lokalizacja VARCHAR(255) NOT NULL,
+    typ VARCHAR(255) NOT NULL,
+    data_zarezerwowania DATE,
+    data_konca_rezerwacji DATE,
+    status VARCHAR(100));
+    
+CREATE SEQUENCE seq_grob_id START WITH 1;
+
+CREATE OR REPLACE TRIGGER grob_auto_increment
+BEFORE INSERT ON groby
+FOR EACH ROW
+BEGIN
+  :new.grob_id := seq_grob_id.NEXTVAL;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE dodaj_grob (
+    p_lokalizacja IN VARCHAR2,
+    p_typ IN VARCHAR2,
+    p_data_zarezerwowania IN DATE,
+    p_data_konca_rezerwacji IN DATE,
+    p_status IN VARCHAR2
+)
+IS
+    lokalizacja_zajeta EXCEPTION;
+    PRAGMA EXCEPTION_INIT(lokalizacja_zajeta, -20001);
+BEGIN
+    IF EXISTS (SELECT * FROM groby WHERE lokalizacja = p_lokalizacja) THEN
+        RAISE lokalizacja_zajeta;
+    END IF;
+    
+    INSERT INTO groby (grob_id, lokalizacja, typ, data_zarezerwowania, data_konca_rezerwacji, status)
+    VALUES (seq_grob_id.NEXTVAL, p_lokalizacja, p_typ, p_data_zarezerwowania, p_data_konca_rezerwacji, p_status);
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Grób dodany do bazy.');
+EXCEPTION
+    WHEN lokalizacja_zajeta THEN
+        DBMS_OUTPUT.PUT_LINE('Błąd: Lokalizacja ' || p_lokalizacja || ' jest już zajęta.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas dodawania grobu: ' || SQLERRM);
+END;
+/
+
+CREATE OR REPLACE PROCEDURE usun_grob (
+    p_grob_id IN NUMBER
+)
+IS
+BEGIN
+    DELETE FROM groby WHERE grob_id = p_grob_id;
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Usunięto grób o id: ' || p_grob_id);
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas usuwania grobu: ' || SQLERRM);
+END;
+/
+
+CREATE OR REPLACE PROCEDURE aktualizuj_grob (
+    p_grob_id IN NUMBER,
+    p_lokalizacja IN VARCHAR2,
+    p_typ IN VARCHAR2,
+    p_data_zarezerwowania IN DATE,
+    p_data_konca_rezerwacji IN DATE,
+    p_status IN VARCHAR2
+)
+IS
+BEGIN
+    UPDATE groby
+    SET lokalizacja = p_lokalizacja,
+        typ = p_typ,
+        data_zarezerwowania = p_data_zarezerwowania,
+        data_konca_rezerwacji = p_data_konca_rezerwacji,
+        status = p_status
+    WHERE grob_id = p_grob_id;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Zaktualizowano grób o id: ' || p_grob_id);
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas aktualizacji grobu: ' || SQLERRM);
+END;
+/
+
+
+
+CREATE TABLE zmarli(
+    zmarly_id NUMBER PRIMARY KEY,
+    imie VARCHAR(100) NOT NULL,
+    nazwisko VARCHAR(100) NOT NULL,
+    data_urodzenia DATE,
+    data_zgonu DATE,
+    grob_id NUMBER REFERENCES groby(grob_id));
+    
+CREATE SEQUENCE seq_zmarly_id START WITH 1;
+
+CREATE OR REPLACE TRIGGER zmarly_auto_increment
+BEFORE INSERT ON zmarli
+FOR EACH ROW
+BEGIN
+  :new.zmarly_id := seq_zmarly_id.NEXTVAL;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE dodaj_zmarly (
+    p_imie IN VARCHAR2,
+    p_nazwisko IN VARCHAR2,
+    p_data_urodzenia IN DATE,
+    p_data_zgonu IN DATE,
+    p_grob_id IN NUMBER
+)
+IS
+BEGIN
+    INSERT INTO zmarli (zmarly_id, imie, nazwisko, data_urodzenia, data_zgonu, grob_id)
+    VALUES (zmarly_seq.NEXTVAL, p_imie, p_nazwisko, p_data_urodzenia, p_data_zgonu, p_grob_id);
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Zmarły ' || p_imie || ' ' || p_nazwisko || ' dodany do bazy.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas dodawania zmarłego: ' || SQLERRM);
+END;
+/
+
+CREATE OR REPLACE PROCEDURE usun_zmarly (
+    p_zmarly_id IN NUMBER
+)
+IS
+BEGIN
+    DELETE FROM zmarli WHERE zmarly_id = p_zmarly_id;
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Zmarły o ID ' || p_zmarly_id || ' został usunięty.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas usuwania zmarłego: ' || SQLERRM);
+END;
+/
+
+CREATE OR REPLACE PROCEDURE aktualizuj_zmarly (
+    p_zmarly_id IN NUMBER,
+    p_imie IN VARCHAR2,
+    p_nazwisko IN VARCHAR2,
+    p_data_urodzenia IN DATE,
+    p_data_zgonu IN DATE
+)
+IS
+BEGIN
+    UPDATE zmarli
+    SET imie = p_imie,
+        nazwisko = p_nazwisko,
+        data_urodzenia = p_data_urodzenia,
+        data_zgonu = p_data_zgonu
+    WHERE zmarly_id = p_zmarly_id;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Zmarły o ID ' || p_zmarly_id || ' został zaktualizowany.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas aktualizacji zmarłego: ' || SQLERRM);
+END;
+/
+
+
+CREATE TABLE oplaty(
+    oplata_id NUMBER PRIMARY KEY,
+    kwota DECIMAL(10,2) NOT NULL,
+    data DATE NOT NULL,
+    typ VARCHAR(100),
+    status VARCHAR(100) NOT NULL,
+    grob_id NUMBER REFERENCES groby(grob_id));
+
+CREATE SEQUENCE seq_oplata_id START WITH 1;
+
+CREATE OR REPLACE TRIGGER oplata_auto_increment
+BEFORE INSERT ON oplaty
+FOR EACH ROW
+BEGIN
+  :new.oplata_id := seq_oplata_id.NEXTVAL;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE dodaj_oplate (
+    p_kwota IN DECIMAL,
+    p_typ IN VARCHAR2 DEFAULT 'Opłata roczna',
+    p_status IN VARCHAR2 DEFAULT 'Zrealizowana',
+    p_grob_id IN NUMBER
+)
+IS
+BEGIN
+    INSERT INTO oplaty (oplata_id, kwota, data, typ, status, grob_id)
+    VALUES (oplaty_seq.NEXTVAL, p_kwota, CURRENT_DATE, p_typ, p_status, p_grob_id);
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Opłata dodana do bazy.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas dodawania opłaty: ' || SQLERRM);
+END;
+/
+    
+CREATE OR REPLACE PROCEDURE usun_oplate (
+    p_oplata_id IN NUMBER
+)
+IS
+BEGIN
+    DELETE FROM oplaty WHERE oplata_id = p_oplata_id;
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Opłata o ID ' || p_oplata_id || ' została usunięta.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas usuwania opłaty: ' || SQLERRM);
+END;
+/
+    
+CREATE OR REPLACE PROCEDURE aktualizuj_oplate (
+    p_oplata_id IN NUMBER,
+    p_kwota IN DECIMAL,
+    p_data IN DATE,
+    p_typ IN VARCHAR2,
+    p_status IN VARCHAR2,
+    p_grob_id IN NUMBER
+)
+IS
+BEGIN
+    UPDATE oplaty
+    SET kwota = p_kwota,
+        data = p_data,
+        typ = p_typ,
+        status = p_status,
+        grob_id = p_grob_id
+    WHERE oplata_id = p_oplata_id;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Opłata o ID ' || p_oplata_id || ' została zaktualizowana.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas aktualizacji opłaty: ' || SQLERRM);
+END;
+/
+  
+    
+
+
+    
+CREATE SEQUENCE seq_rezerwacja_id START WITH 1;
+
+CREATE OR REPLACE TRIGGER rezerwacja_auto_increment
+BEFORE INSERT ON rezerwacje
+FOR EACH ROW
+BEGIN
+  :new.rezerwacja_id := seq_rezerwacja_id.NEXTVAL;
+END;
+/
+
+CREATE TABLE rezerwacje(
+    rezerwacja_id NUMBER PRIMARY KEY,
+    data_zarezerwowania DATE NOT NULL,
+    poczatek_rezerwacji DATE NOT NULL,
+    koniec_rezerwacji DATE NOT NULL,
+    grob_id NUMBER REFERENCES groby(grob_id));
+
+
+
+CREATE OR REPLACE PROCEDURE dodaj_rezerwacje (
+    p_data_zarezerwowania IN DATE,
+    p_poczatek_rezerwacji IN DATE,
+    p_koniec_rezerwacji IN DATE,
+    p_grob_id IN NUMBER
+)
+IS
+BEGIN
+    INSERT INTO rezerwacje (rezerwacja_id, data_zarezerwowania, poczatek_rezerwacji, koniec_rezerwacji, grob_id)
+    VALUES (rezerwacje_seq.NEXTVAL, p_data_zarezerwowania, p_poczatek_rezerwacji, p_koniec_rezerwacji, p_grob_id);
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Rezerwacja grobu dodana do bazy.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas dodawania rezerwacji: ' || SQLERRM);
+END;
+/
+
+CREATE OR REPLACE PROCEDURE usun_rezerwacje (
+    p_rezerwacja_id IN NUMBER
+)
+IS
+BEGIN
+    DELETE FROM rezerwacje WHERE rezerwacja_id = p_rezerwacja_id;
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Rezerwacja o ID ' || p_rezerwacja_id || ' została usunięta.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas usuwania rezerwacji: ' || SQLERRM);
+END;
+/
+
+CREATE OR REPLACE PROCEDURE aktualizuj_rezerwacje (
+    p_rezerwacja_id IN NUMBER,
+    p_data_zarezerwowania IN DATE,
+    p_poczatek_rezerwacji IN DATE,
+    p_koniec_rezerwacji IN DATE,
+    p_grob_id IN NUMBER
+)
+IS
+BEGIN
+    UPDATE rezerwacje
+    SET data_zarezerwowania = p_data_zarezerwowania,
+        poczatek_rezerwacji = p_poczatek_rezerwacji,
+        koniec_rezerwacji = p_koniec_rezerwacji,
+        grob_id = p_grob_id
+    WHERE rezerwacja_id = p_rezerwacja_id;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Rezerwacja o ID ' || p_rezerwacja_id || ' została zaktualizowana.');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        DBMS_OUTPUT.PUT_LINE('Błąd podczas aktualizacji rezerwacji: ' || SQLERRM);
+END;
+/
+    
+CREATE TABLE archiwum_zmarlych(
+    zmarly_id NUMBER PRIMARY KEY,
+    imie VARCHAR(100) NOT NULL,
+    nazwisko VARCHAR(100) NOT NULL,
+    data_urodzenia DATE,
+    data_zgonu DATE,
+    data_zarchiwizowania TIMESTAMP NOT NULL,
+    opis VARCHAR(255));
+    
+CREATE OR REPLACE TRIGGER archiwizuj_zmarlych_przed_usunieciem
+BEFORE DELETE ON zmarli
+FOR EACH ROW
+DECLARE
+    v_data_zarchiwizowania TIMESTAMP := CURRENT_TIMESTAMP;
+BEGIN
+    INSERT INTO archiwum_zmarlych 
+    (zmarly_id, imie, nazwisko, data_urodzenia, data_zgonu, data_zarchiwizowania, opis)
+    VALUES (:OLD.zmarly_id, :OLD.imie, :OLD.nazwisko, :OLD.data_urodzenia, :OLD.data_zgonu, v_data_zarchiwizowania, 'Zarchiwizowane przed usunięciem');
+END;
+/
+
+
+CREATE TABLE logi(
+    log_id NUMBER PRIMARY KEY,
+    data TIMESTAMP NOT NULL,
+    wydarzenie VARCHAR(100) NOT NULL,
+    opis VARCHAR(255) NOT NULL,
+    uzytkownik VARCHAR(255) NOT NULL);
+    
+CREATE OR REPLACE FUNCTION loguj_zdarzenie (
+    p_wydarzenie IN VARCHAR2,
+    p_opis IN VARCHAR2,
+    p_uzytkownik IN VARCHAR2
+) 
+RETURN VARCHAR2
+IS
+BEGIN
+    INSERT INTO logi (data, wydarzenie, opis, uzytkownik)
+    VALUES (CURRENT_TIMESTAMP, p_wydarzenie, p_opis, p_uzytkownik);
+    COMMIT;
+    RETURN 'Zdarzenie zalogowane.';
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RETURN 'Błąd podczas logowania zdarzenia: ' || SQLERRM;
+END;
+/
+
+
+    
+CREATE TABLE uzytkownicy(
+    uzytkownik_id NUMBER PRIMARY KEY,
+    nazwa VARCHAR(100) UNIQUE NOT NULL,
+    haslo VARCHAR(100) NOT NULL,
+    rola VARCHAR(100) NOT NULL);
+
+CREATE OR REPLACE FUNCTION sprawdz_nazwe(p_nazwa VARCHAR2) 
+RETURN NUMBER IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM uzytkownicy WHERE nazwa = p_nazwa;
+    
+    IF v_count > 0 THEN
+        RETURN 0;
+    ELSE
+        RETURN 1;
+    END IF;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE dodaj_uzytkownika(
+    p_uzytkownik_id IN NUMBER,
+    p_nazwa IN VARCHAR2,
+    p_haslo IN VARCHAR2,
+    p_rola IN VARCHAR2
+) IS
+BEGIN
+    IF sprawdz_nazwe(p_nazwa) = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('Błąd: Nazwa użytkownika "' || p_nazwa || '" już istnieje.');
+        RETURN;
+    END IF;
+    
+    INSERT INTO uzytkownicy (uzytkownik_id, nazwa, haslo, rola)
+    VALUES (p_uzytkownik_id, p_nazwa, p_haslo, p_rola);
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Użytkownik "' || p_nazwa || '" został dodany pomyślnie.');
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Wystąpił błąd podczas dodawania użytkownika: ' || SQLERRM);
+        ROLLBACK;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE aktualizuj_uzytkownika(
+    p_uzytkownik_id IN NUMBER,
+    p_nazwa IN VARCHAR2,
+    p_haslo IN VARCHAR2,
+    p_rola IN VARCHAR2
+) IS
+    v_count NUMBER;
+BEGIN
+
+    SELECT COUNT(*) INTO v_count
+    FROM uzytkownicy WHERE uzytkownik_id = p_uzytkownik_id;
+
+    IF v_count = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('Błąd: Użytkownik o ID ' || p_uzytkownik_id || ' nie istnieje.');
+        RETURN;
+    END IF;
+
+    IF sprawdz_nazwe(p_nazwa) = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('Błąd: Nazwa użytkownika "' || p_nazwa || '" już istnieje.');
+        RETURN;
+    END IF;
+    
+    UPDATE uzytkownicy SET nazwa = p_nazwa, haslo = p_haslo, rola = p_rola WHERE uzytkownik_id = p_uzytkownik_id;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Dane użytkownika o ID ' || p_uzytkownik_id || ' zostały zaktualizowane.');
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Wystąpił błąd podczas aktualizacji użytkownika: ' || SQLERRM);
+        ROLLBACK;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE usun_uzytkownika(p_uzytkownik_id IN NUMBER) IS
+    v_count NUMBER;
+BEGIN
+
+    SELECT COUNT(*) INTO v_count
+    FROM uzytkownicy WHERE uzytkownik_id = p_uzytkownik_id;
+
+    IF v_count = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('Błąd: Użytkownik o ID ' || p_uzytkownik_id || ' nie istnieje.');
+        RETURN;
+    END IF;
+    
+    DELETE FROM uzytkownicy WHERE uzytkownik_id = p_uzytkownik_id;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Użytkownik o ID ' || p_uzytkownik_id || ' został usunięty.');
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Wystąpił błąd podczas usuwania użytkownika: ' || SQLERRM);
+        ROLLBACK;
+END;
+/
+
+  
+SELECT zmarly_id, imie, nazwisko, data_zgonu, DENSE_RANK() OVER (ORDER BY data_zgonu ASC) 
+AS rank_zgonu FROM zmarli ORDER BY rank_zgonu;
+
+
+
+CREATE SEQUENCE seq_podsumowanie START WITH 1;
+
+
+CREATE TABLE podsumowania (
+    podsumowanie_id NUMBER PRIMARY KEY,
+    okres_typ VARCHAR2(100),
+    okres_rok NUMBER,
+    okres_miesiac NUMBER,
+    liczba_pochowkow NUMBER,
+    liczba_rezerwacji NUMBER,
+    suma_oplat DECIMAL(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE PROCEDURE podsumowanie_miesieczne(p_rok IN NUMBER, p_miesiac IN NUMBER) IS
+BEGIN
+    INSERT INTO podsumowania (podsumowanie_id, okres_typ, okres_rok, okres_miesiac, liczba_pochowkow, liczba_rezerwacji, suma_oplat)
+    SELECT seq_podsumowanie.NEXTVAL, 'Miesięczne', p_rok, p_miesiac,
+        (SELECT COUNT(*) FROM zmarli WHERE EXTRACT(YEAR FROM data_zgonu) = p_rok AND EXTRACT(MONTH FROM data_zgonu) = p_miesiac),
+        (SELECT COUNT(*) FROM rezerwacje WHERE EXTRACT(YEAR FROM poczatek_rezerwacji) = p_rok AND EXTRACT(MONTH FROM poczatek_rezerwacji) = p_miesiac),
+        (SELECT SUM(kwota) FROM oplaty WHERE EXTRACT(YEAR FROM data) = p_rok AND EXTRACT(MONTH FROM data) = p_miesiac)
+    FROM dual;
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Podsumowanie miesięczne zostało zapisane.');
+END;
+/
+
+CREATE OR REPLACE PROCEDURE podsumowanie_kwartalne(p_rok IN NUMBER, p_kwartal IN NUMBER) IS
+    v_poczatek_kwartalu DATE;
+    v_koniec_kwartalu DATE;
+BEGIN
+    CASE p_kwartal
+        WHEN 1 THEN
+            v_poczatek_kwartalu := TO_DATE(p_rok || '-01-01', 'YYYY-MM-DD');
+            v_koniec_kwartalu := TO_DATE(p_rok || '-03-31', 'YYYY-MM-DD');
+        WHEN 2 THEN
+            v_poczatek_kwartalu := TO_DATE(p_rok || '-04-01', 'YYYY-MM-DD');
+            v_koniec_kwartalu := TO_DATE(p_rok || '-06-30', 'YYYY-MM-DD');
+        WHEN 3 THEN
+            v_poczatek_kwartalu := TO_DATE(p_rok || '-07-01', 'YYYY-MM-DD');
+            v_koniec_kwartalu := TO_DATE(p_rok || '-09-30', 'YYYY-MM-DD');
+        WHEN 4 THEN
+            v_poczatek_kwartalu := TO_DATE(p_rok || '-10-01', 'YYYY-MM-DD');
+            v_koniec_kwartalu := TO_DATE(p_rok || '-12-31', 'YYYY-MM-DD');
+    END CASE;
+
+    INSERT INTO podsumowania (podsumowanie_id, okres_typ, okres_rok, okres_miesiac, liczba_pochowkow, liczba_rezerwacji, suma_oplat)
+    SELECT seq_podsumowanie.NEXTVAL, 'Kwartalne', p_rok, p_kwartal,
+       (SELECT COUNT(*) FROM zmarli WHERE data_zgonu BETWEEN v_poczatek_kwartalu AND v_koniec_kwartalu),
+       (SELECT COUNT(*) FROM rezerwacje WHERE poczatek_rezerwacji BETWEEN v_poczatek_kwartalu AND v_koniec_kwartalu),
+       (SELECT SUM(kwota) FROM oplaty WHERE data BETWEEN v_poczatek_kwartalu AND v_koniec_kwartalu)
+    FROM dual;
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Podsumowanie kwartalne zostało zapisane.');
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE podsumowanie_roczne(p_rok IN NUMBER) IS
+BEGIN
+    INSERT INTO podsumowania (podsumowanie_id, okres_typ, okres_rok, okres_miesiac, liczba_pochowkow, liczba_rezerwacji, suma_oplat)
+    SELECT seq_podsumowanie.NEXTVAL, 'Roczne', p_rok, 0,
+        (SELECT COUNT(*) FROM zmarli WHERE EXTRACT(YEAR FROM data_zgonu) = p_rok),
+        (SELECT COUNT(*) FROM rezerwacje WHERE EXTRACT(YEAR FROM poczatek_rezerwacji) = p_rok),
+        (SELECT SUM(kwota) FROM oplaty WHERE EXTRACT(YEAR FROM data) = p_rok)
+    FROM dual;
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Podsumowanie roczne zostało zapisane.');
+END;
+/
+
+CREATE OR REPLACE TRIGGER automatyczne_podsumowanie_zmarli
+AFTER INSERT ON zmarli
+FOR EACH ROW
+DECLARE
+    v_rok NUMBER;
+    v_miesiac NUMBER;
+    v_kwartal NUMBER;
+    PRAGMA AUTONOMOUS_TRANSACTION;    
+BEGIN
+    IF :NEW.data_zgonu IS NOT NULL THEN
+        v_rok := EXTRACT(YEAR FROM :NEW.data_zgonu);
+        v_miesiac := EXTRACT(MONTH FROM :NEW.data_zgonu);
+        
+        IF v_miesiac IN (1, 2, 3) THEN
+            v_kwartal := 1;
+        ELSIF v_miesiac IN (4, 5, 6) THEN
+            v_kwartal := 2;
+        ELSIF v_miesiac IN (7, 8, 9) THEN
+            v_kwartal := 3;
+        ELSE
+            v_kwartal := 4;
+        END IF;
+        
+        podsumowanie_miesieczne(v_rok, v_miesiac);
+        podsumowanie_kwartalne(v_rok, v_kwartal);
+        podsumowanie_roczne(v_rok);
+    END IF;
+END;
+/
+
+
+CREATE OR REPLACE TRIGGER automatyczne_podsumowanie_rezerwacje
+AFTER INSERT ON rezerwacje
+FOR EACH ROW
+DECLARE
+    v_rok NUMBER;
+    v_miesiac NUMBER;
+    v_kwartal NUMBER;
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    IF :NEW.poczatek_rezerwacji IS NOT NULL THEN
+        v_rok := EXTRACT(YEAR FROM :NEW.poczatek_rezerwacji);
+        v_miesiac := EXTRACT(MONTH FROM :NEW.poczatek_rezerwacji);
+
+        IF v_miesiac IN (1, 2, 3) THEN
+            v_kwartal := 1;
+        ELSIF v_miesiac IN (4, 5, 6) THEN
+            v_kwartal := 2;
+        ELSIF v_miesiac IN (7, 8, 9) THEN
+            v_kwartal := 3;
+        ELSE
+            v_kwartal := 4;
+        END IF;
+
+        podsumowanie_miesieczne(v_rok, v_miesiac);
+        podsumowanie_kwartalne(v_rok, v_kwartal);
+        podsumowanie_roczne(v_rok);
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER automatyczne_podsumowanie_oplaty
+AFTER INSERT ON oplaty
+FOR EACH ROW
+DECLARE
+    v_rok NUMBER;
+    v_miesiac NUMBER;
+    v_kwartal NUMBER;
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    IF :NEW.data IS NOT NULL THEN
+        v_rok := EXTRACT(YEAR FROM :NEW.data);
+        v_miesiac := EXTRACT(MONTH FROM :NEW.data);
+
+        IF v_miesiac IN (1, 2, 3) THEN
+            v_kwartal := 1;
+        ELSIF v_miesiac IN (4, 5, 6) THEN
+            v_kwartal := 2;
+        ELSIF v_miesiac IN (7, 8, 9) THEN
+            v_kwartal := 3;
+        ELSE
+            v_kwartal := 4;
+        END IF;
+
+        podsumowanie_miesieczne(v_rok, v_miesiac);
+        podsumowanie_kwartalne(v_rok, v_kwartal);
+        podsumowanie_roczne(v_rok);
+    END IF;
+END;
+/
+
+INSERT INTO zmarli (zmarly_id, imie, nazwisko, data_urodzenia, data_zgonu, grob_id)
+VALUES (1, 'Jan', 'Kowalski', TO_DATE('2002-01-01'), TO_DATE('2022-01-01', 'YYYY-MM-DD'), 1);
