@@ -1,0 +1,7 @@
+uzytkownik_id,nazwa,haslo,rola
+1,admin1,admin123,Administrator
+2,janek1,haslo123,Pracownik
+3,anna1,abc123,Pracownik
+4,piotr1,xyz123,Administrator
+5,beata1,pass123,
+
