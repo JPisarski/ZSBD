@@ -24,10 +24,13 @@ CREATE OR REPLACE PROCEDURE dodaj_grob (
     p_status IN VARCHAR2
 )
 IS
+    v_count INT;
     lokalizacja_zajeta EXCEPTION;
     PRAGMA EXCEPTION_INIT(lokalizacja_zajeta, -20001);
 BEGIN
-    IF EXISTS (SELECT * FROM groby WHERE lokalizacja = p_lokalizacja) THEN
+    SELECT COUNT(*) INTO v_count
+    FROM groby WHERE lokalizacja = p_lokalizacja;
+    IF v_count > 0 THEN
         RAISE lokalizacja_zajeta;
     END IF;
     
@@ -117,7 +120,7 @@ CREATE OR REPLACE PROCEDURE dodaj_zmarly (
 IS
 BEGIN
     INSERT INTO zmarli (zmarly_id, imie, nazwisko, data_urodzenia, data_zgonu, grob_id)
-    VALUES (zmarly_seq.NEXTVAL, p_imie, p_nazwisko, p_data_urodzenia, p_data_zgonu, p_grob_id);
+    VALUES (seq_zmarly_id.NEXTVAL, p_imie, p_nazwisko, p_data_urodzenia, p_data_zgonu, p_grob_id);
     
     COMMIT;
     DBMS_OUTPUT.PUT_LINE('Zmarły ' || p_imie || ' ' || p_nazwisko || ' dodany do bazy.');
@@ -196,7 +199,7 @@ CREATE OR REPLACE PROCEDURE dodaj_oplate (
 IS
 BEGIN
     INSERT INTO oplaty (oplata_id, kwota, data, typ, status, grob_id)
-    VALUES (oplaty_seq.NEXTVAL, p_kwota, CURRENT_DATE, p_typ, p_status, p_grob_id);
+    VALUES (seq_oplata_id.NEXTVAL, p_kwota, CURRENT_DATE, p_typ, p_status, p_grob_id);
     
     COMMIT;
     DBMS_OUTPUT.PUT_LINE('Opłata dodana do bazy.');
@@ -255,13 +258,7 @@ END;
     
 CREATE SEQUENCE seq_rezerwacja_id START WITH 1;
 
-CREATE OR REPLACE TRIGGER rezerwacja_auto_increment
-BEFORE INSERT ON rezerwacje
-FOR EACH ROW
-BEGIN
-  :new.rezerwacja_id := seq_rezerwacja_id.NEXTVAL;
-END;
-/
+
 
 CREATE TABLE rezerwacje(
     rezerwacja_id NUMBER PRIMARY KEY,
@@ -270,7 +267,13 @@ CREATE TABLE rezerwacje(
     koniec_rezerwacji DATE NOT NULL,
     grob_id NUMBER REFERENCES groby(grob_id));
 
-
+CREATE OR REPLACE TRIGGER rezerwacja_auto_increment
+BEFORE INSERT ON rezerwacje
+FOR EACH ROW
+BEGIN
+  :new.rezerwacja_id := seq_rezerwacja_id.NEXTVAL;
+END;
+/
 
 CREATE OR REPLACE PROCEDURE dodaj_rezerwacje (
     p_data_zarezerwowania IN DATE,
@@ -281,7 +284,7 @@ CREATE OR REPLACE PROCEDURE dodaj_rezerwacje (
 IS
 BEGIN
     INSERT INTO rezerwacje (rezerwacja_id, data_zarezerwowania, poczatek_rezerwacji, koniec_rezerwacji, grob_id)
-    VALUES (rezerwacje_seq.NEXTVAL, p_data_zarezerwowania, p_poczatek_rezerwacji, p_koniec_rezerwacji, p_grob_id);
+    VALUES (seq_rezerwacja_id.NEXTVAL, p_data_zarezerwowania, p_poczatek_rezerwacji, p_koniec_rezerwacji, p_grob_id);
     
     COMMIT;
     DBMS_OUTPUT.PUT_LINE('Rezerwacja grobu dodana do bazy.');
